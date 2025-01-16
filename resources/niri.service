@@ -8,8 +8,6 @@ After=graphical-session-pre.target
 Wants=xdg-desktop-autostart.target
 Before=xdg-desktop-autostart.target
 
-Before=app-blueman@autostart.service
-
 [Service]
 Slice=session.slice
 Type=notify
