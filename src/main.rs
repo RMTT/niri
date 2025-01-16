@@ -214,6 +214,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "dbus")]
     dbus::DBusServers::start(&mut state, cli.session);
 
+    if env::var_os("NIRI_DISABLE_SYSTEM_MANAGER_NOTIFY").map_or(true, |x| x != "1") {
+        // Notify systemd we're ready.
+        if let Err(err) = sd_notify::notify(true, &[NotifyState::Ready]) {
+            warn!("error notifying systemd: {err:?}");
+        };
+
+        // Send ready notification to the NOTIFY_FD file descriptor.
+        if let Err(err) = notify_fd() {
+            warn!("error notifying fd: {err:?}");
+        }
+    }
+
     // Set up config file watcher.
     let _watcher = {
         let (tx, rx) = calloop::channel::sync_channel(1);
@@ -240,18 +252,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         state.niri.config_error_notification.show();
     } else if config_created {
         state.niri.config_error_notification.show_created(path);
-    }
-
-    if env::var_os("NIRI_DISABLE_SYSTEM_MANAGER_NOTIFY").map_or(true, |x| x != "1") {
-        // Notify systemd we're ready.
-        if let Err(err) = sd_notify::notify(true, &[NotifyState::Ready]) {
-            warn!("error notifying systemd: {err:?}");
-        };
-
-        // Send ready notification to the NOTIFY_FD file descriptor.
-        if let Err(err) = notify_fd() {
-            warn!("error notifying fd: {err:?}");
-        }
     }
 
     // Run the compositor.
